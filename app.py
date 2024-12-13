@@ -21,6 +21,8 @@ import firebase_admin
 load_dotenv()
 api_key = os.getenv('API_KEY')
 firebase_project_id = os.getenv('firebase_project_id')
+sender_mail = os.getenv('sender_mail')
+sender_pwd = os.getenv('sender_pwd')
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -165,8 +167,8 @@ def trigger_sos_action():
     subject = f"{keyword} Alert Trigerred by {child_name}!!!!!!!!"
     body = f'''An SOS keyword '{keyword}' has been triggered by {child_name}. Please check on them.
     Please wait for sometime for the detailed report.'''
-    sender_email = "sssanthosh.cse@gmail.com"
-    sender_password = "ehih qlzx xfan dvoy"
+    sender_email = str(sender_mail)
+    sender_password = str(sender_pwd)
     smtp_server = 'smtp.gmail.com'
     smtp_port = 465
 
