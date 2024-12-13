@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeEcho</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 2px;
+            box-sizing: border-box;
+        }
+
+        .form-container {
+            width: 30%; /* Smaller width for the left side */
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-container {
+            width: 65%; /* Larger width for the right side */
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="number"], input[type="email"], select {
+            padding: 10px;
+            margin: 8px 0;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin-top: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 20px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .confirmed-row {
+            background-color: #d4edda; /* Light green background */
+        }
+
+        .description {
+            width: 100%;
+            height: 60px; /* Increased height to ensure full text is visible */
+            box-sizing: border-box;
+            padding: 10px;
+        }
+
+        select[multiple] {
+            height: 100px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .action-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .action-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .save-btn {
+            background-color: #28a745;
+            width: 100%;
+        }
+
+        @media screen and (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .form-container, .table-container {
+                width: 100%;
+                margin: 0;
+                margin-bottom: 20px;
+            }
+        }
+
+    </style>
+    <script>
+        let confirmedRows = {};
+
+        // Function to handle Confirm button click
+        function confirmRow(rowId) {
+            const row = document.getElementById(rowId);
+            const keyword = row.querySelector(".keyword").textContent;
+            const description = row.querySelector(".description").value;
+            const contactSelect = row.querySelector(".contact-select");
+
+            // Get selected contacts (from the dropdown)
+            const selectedContacts = Array.from(contactSelect.selectedOptions).map(option => option.value);
+
+            // Get the corresponding emails from the form
+            const contact1Email = document.getElementById("contact1").value;
+            const contact2Email = document.getElementById("contact2").value;
+            let selectedContactEmails = [];
+
+            // Map selected contacts to their corresponding email values
+            selectedContacts.forEach(contact => {
+                if (contact === "contact1") {
+                    selectedContactEmails.push(contact1Email);
+                } else if (contact === "contact2") {
+                    selectedContactEmails.push(contact2Email);
+                }
+            });
+
+            // Mark the row as confirmed (green)
+            row.classList.add("confirmed-row");
+            row.setAttribute("data-confirmed", "true");
+
+            confirmedRows[rowId] = {
+                keyword: keyword,
+                description: description,
+                selectedContactEmails: selectedContactEmails
+            };
+        }
+
+        // Function to handle Save button click
+        function saveData() {
+            const childName = document.getElementById("child_name").value;
+            const age = document.getElementById("age").value;
+            const contact1Email = document.getElementById("contact1").value;
+            const contact2Email = document.getElementById("contact2").value;
+
+            // Collect confirmed rows
+            const sosKeywords = {};
+
+            for (let rowId in confirmedRows) {
+                const rowData = confirmedRows[rowId];
+                sosKeywords[rowData.keyword] = {
+                    description: rowData.description,
+                    contacts: rowData.selectedContactEmails
+                };
+            }
+
+            // Prepare data to send
+            const data = {
+                child_name: childName,
+                age: age,
+                contact1: contact1Email,
+                contact2: contact2Email,
+                sos_keywords: sosKeywords
+            };
+
+            // Send data to the Flask backend via POST request
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message); // Show the success message
+            })
+            .catch(error => {
+                alert("Error: " + error);
+            });
+        }
+    </script>
+</head>
+<body>
+
+<h1>SafeEchos</h1>
+
+<div class="container">
+    <!-- Form Section -->
+    <div class="form-container">
+        <h2>Child Information</h2>
+        <form id="childForm">
+            <label for="child_name">Child Name: </label>
+            <input type="text" id="child_name" name="child_name" required><br>
+
+            <label for="age">Age: </label>
+            <input type="number" id="age" name="age" required><br>
+
+            <label for="contact1">Emergency Contact 1 (mail id): </label>
+            <input type="email" id="contact1" name="contact1" required><br>
+
+            <label for="contact2">Emergency Contact 2 (mail id): </label>
+            <input type="email" id="contact2" name="contact2" required><br>
+        </form>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-container">
+        <h2>AI Generated SOS Keywords</h2>
+        <table id="keywordsTable">
+            <thead>
+                <tr>
+                    <th>Keyword</th>
+                    <th>Description</th>
+                    <th>Contacts</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for keyword, description in data.items() %}
+                <tr id="row_{{ loop.index }}">
+                    <td class="keyword">{{ keyword }}</td>
+                    <td><input type="text" class="description" value="{{ description }}"></td>
+                    <td>
+                        <select class="contact-select" multiple>
+                            <option value="contact1">Contact 1</option>
+                            <option value="contact2">Contact 2</option>
+                        </select>
+                    </td>
+                    <td><button type="button" class="action-btn" onclick="confirmRow('row_{{ loop.index }}')">Confirm</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<button type="button" class="save-btn" onclick="saveData()">Save</button>
+
+</body>
+</html>

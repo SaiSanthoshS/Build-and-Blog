@@ -1,0 +1,5 @@
+/.env
+/.venv
+/creds.json
+/firebase_creds.json
+/voice_test.ipynb

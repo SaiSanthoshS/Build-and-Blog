@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Child Data</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #3f51b5;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 2em;
+        }
+
+        h2 {
+            font-size: 1.5em;
+        }
+
+        p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        strong {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .record-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: #3f51b5;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            line-height: 150px;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .record-button:hover {
+            background-color: #303f9f;
+            transform: scale(1.05);
+        }
+
+        .record-button:active {
+            background-color: #1a237e;
+        }
+
+        #statusMessage {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #888;
+        }
+
+        #transcription {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 15px;
+            width: 80%;
+            max-width: 800px;
+            height: 120px;
+            overflow-y: auto;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+
+        ul {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+
+        li {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 30px;
+            font-size: 1.1em;
+            color: #3f51b5;
+            text-decoration: none;
+            border: 1px solid #3f51b5;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        a:hover {
+            background-color: #3f51b5;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Child Data for {{ child_data['name'] }}</h1>
+    <p><strong>Name:</strong> {{ child_data['name'] }}</p>
+    <p><strong>Age:</strong> {{ child_data['age'] }}</p>
+
+    <h2>SOS Keywords</h2>
+    <ul>
+        {% for keyword in sos_keywords %}
+            <li><strong>{{ keyword.keyword }}:</strong> {{ keyword.description }}
+                <ul>
+                    {% for contact in keyword.contacts %}
+                        <li>Contact: {{ contact }}</li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Big round button to trigger recording -->
+    <button class="record-button" id="recordButton">Record</button>
+
+    <p id="statusMessage"></p>
+
+    <div id="transcription">Live transcription will appear here...</div>
+
+    <a href="/">Back to Dashboard</a>
+
+    <script>
+        // Initialize Web Speech API for live speech-to-text
+        let recognition;
+        let isRecording = false;
+
+        // Track triggered keywords to avoid duplicate alerts
+        const triggeredKeywords = new Set();
+
+        const sosKeywords = JSON.parse('{{ sos_keywords | tojson | safe }}');
+        console.log(sosKeywords);
+
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Sorry, your browser doesn't support speech recognition. Please use Google Chrome.");
+        } else {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true; // Enable live transcription
+
+            recognition.onstart = function() {
+                console.log("Speech recognition started.");
+                document.getElementById("statusMessage").innerText = "Recording... Please speak.";
+            };
+
+            recognition.onresult = function(event) {
+                let transcript = "";
+
+                // Concatenate results from the speech recognition event
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+
+                // Normalize transcript to lowercase for consistent comparisons
+                transcript = transcript.toLowerCase();
+
+                // Update transcription div with the latest transcription
+                document.getElementById("transcription").innerText = transcript;
+
+                // Check for SOS keywords in the transcription
+                checkForSOSKeyword(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                console.log("Error in speech recognition: " + event.error);
+                document.getElementById("statusMessage").innerText = "Error occurred during recording.";
+            };
+
+            recognition.onend = function() {
+                console.log("Speech recognition ended.");
+                document.getElementById("statusMessage").innerText = "Recording stopped.";
+            };
+        }
+
+        // Function to check for SOS keyword in the transcription
+        function checkForSOSKeyword(transcript) {
+            sosKeywords.forEach(keyword => {
+                const normalizedKeyword = keyword.keyword.toLowerCase();
+
+                // Trigger only if the keyword is found and hasn't been triggered yet
+                if (transcript.includes(normalizedKeyword) && !triggeredKeywords.has(normalizedKeyword)) {
+                    console.log(`SOS Keyword detected: ${keyword.keyword}`);
+
+                    // Add the keyword to the triggered set
+                    triggeredKeywords.add(normalizedKeyword);
+
+                    // Trigger the backend function for the SOS keyword
+                    triggerBackendFunction(keyword.keyword);
+                }
+            });
+        }
+
+        // Function to trigger backend API when SOS keyword is matched
+        function triggerBackendFunction(keyword) {
+            // Send the matched keyword to the backend (e.g., log, alert, etc.)
+            fetch(`/trigger_sos_action`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    keyword: keyword,
+                    child_name: "{{ child_data['name'] }}" // You can send other relevant data as well
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Backend function triggered successfully:", data);
+                // You can update the UI with a message or take action as required
+                document.getElementById("statusMessage").innerText = "SOS alert triggered!";
+            })
+            .catch(error => {
+                console.error("Error triggering backend function:", error);
+                document.getElementById("statusMessage").innerText = "Error triggering SOS action.";
+            });
+        }
+
+        document.getElementById("recordButton").addEventListener("click", function() {
+            if (!isRecording) {
+                // Start speech recognition
+                recognition.start();
+                isRecording = true;
+                document.getElementById("recordButton").disabled = true;
+
+                // Send the request to start recording the audio
+                fetch("/start_recording/{{ child_data['name'] }}", {
+                    method: "POST"
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("statusMessage").innerText = data.message;
+                    document.getElementById("recordButton").disabled = false;
+                })
+                .catch(error => {
+                    document.getElementById("statusMessage").innerText = "Error while recording.";
+                    document.getElementById("recordButton").disabled = false;
+                });
+            } else {
+                // Stop speech recognition
+                recognition.stop();
+                isRecording = false;
+                document.getElementById("recordButton").disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
