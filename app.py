@@ -167,8 +167,8 @@ def trigger_sos_action():
     subject = f"{keyword} Alert Trigerred by {child_name}!!!!!!!!"
     body = f'''An SOS keyword '{keyword}' has been triggered by {child_name}. Please check on them.
     Please wait for sometime for the detailed report.'''
-    sender_email = str(sender_mail)
-    sender_password = str(sender_pwd)
+    sender_email = f"{sender_mail}"
+    sender_password = f"{sender_pwd}"
     smtp_server = 'smtp.gmail.com'
     smtp_port = 465
 
